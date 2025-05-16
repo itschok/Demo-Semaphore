@@ -41,7 +41,7 @@
     - name: Show Stats
       debug:
         msg: >
-          === System Usage Stats === | CPU Usage: {{ cpu_usage }} % |
+          {{ dtg }},| CPU Usage: {{ cpu_usage }} % |
           Memory: {{ mem_total }} GB total / {{ mem_free }} GB free |
           Disk (C:): {{ disk_total }} GB total / {{ disk_free }} GB free
 
