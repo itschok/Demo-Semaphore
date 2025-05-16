@@ -1,7 +1,7 @@
 ---
 - name: Get System Stats from Windows hosts
   hosts: windows
-  gather_facts: true  # ต้องเปิด gather_facts เพื่อให้ ansible_date_time ทำงานได้
+  gather_facts: true  
 
   tasks:
     - name: Retrieve CPU Usage Percent (CookedValue)
