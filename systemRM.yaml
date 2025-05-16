@@ -2,6 +2,8 @@
 - name: Get CPU, Memory, HDD Usage from Windows
   hosts: windows
   gather_facts: true
+  vars:
+    filename: "fact_report.csv"
 
   tasks:
     - name: Get CPU Usage (%)
@@ -37,6 +39,13 @@
         mem_free:  "{{ mem.stdout_lines[1].split('=')[1] | float }}"
         disk_total: "{{ disk.stdout_lines[0].split('=')[1] | float }}"
         disk_free:  "{{ disk.stdout_lines[1].split('=')[1] | float }}"
+    - name: Create CSV file and add header
+      lineinfile:
+          dest: "{{ filename }}"
+          line: "net_hostname,net_system,net_version"
+          create: yes
+          state: present
+          run_once: true
 
     - name: Show Stats
       debug:
