@@ -1,7 +1,7 @@
 ---
 - name: Get System Stats from Windows hosts
   hosts: windows
-  gather_facts: false
+  gather_facts: true  # ต้องเปิด gather_facts เพื่อให้ ansible_date_time ทำงานได้
 
   tasks:
     - name: Retrieve CPU Usage Percent (CookedValue)
@@ -15,7 +15,9 @@
     - name: Parse CPU Usage
       ansible.builtin.set_fact:
         cpu_usage_percent: "{{ cpu_usage_raw.stdout | trim | float | default(0) }}"
-    - name: DATE AND TIME
+
+    - name: Set DateTime Fact
+      ansible.builtin.set_fact:
         dtg: "Current time (UTC): {{ ansible_date_time.iso8601 }}"
 
     - name: Retrieve Memory Usage
@@ -38,4 +40,9 @@
 
     - name: Display Stats
       ansible.builtin.debug:
-        msg: "{{ dtg }}" "CPU Usage: {{ cpu_usage_percent }}%, Total Memory: {{ total_memory_gb }} GB, Used Memory: {{ used_memory_gb }} GB, Free Memory: {{ free_memory_gb }} GB"
+        msg: >
+          {{ dtg }},
+          CPU Usage: {{ cpu_usage_percent }}%,
+          Total Memory: {{ total_memory_gb }} GB,
+          Used Memory: {{ used_memory_gb }} GB,
+          Free Memory: {{ free_memory_gb }} GB
