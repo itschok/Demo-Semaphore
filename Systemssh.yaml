@@ -1,0 +1,32 @@
+---
+- name: Get System Stats from Linux hosts
+  hosts: windows
+  gather_facts: false
+
+  tasks:
+    - name: Get CPU Usage Percent
+      ansible.builtin.shell: |
+        top -bn2 | grep "Cpu(s)" | tail -n1 | \
+        awk '{print 100 - $8}'  # %idle --> 100 - idle = usage
+      register: cpu_usage_raw
+      changed_when: false
+
+    - name: Parse CPU Usage
+      ansible.builtin.set_fact:
+        cpu_usage_percent: "{{ cpu_usage_raw.stdout | trim | float | round(2) }}"
+
+    - name: Get Memory Usage
+      ansible.builtin.shell: |
+        free -g | awk '/^Mem:/ { print "total="$2"\nused="$3"\nfree="$4 }'
+      register: memory_stats_raw
+      changed_when: false
+
+    - name: Parse Memory Stats
+      ansible.builtin.set_fact:
+        total_memory_gb: "{{ memory_stats_raw.stdout_lines[0].split('=')[1] | trim | float }}"
+        used_memory_gb: "{{ memory_stats_raw.stdout_lines[1].split('=')[1] | trim | float }}"
+        free_memory_gb: "{{ memory_stats_raw.stdout_lines[2].split('=')[1] | trim | float }}"
+
+    - name: Display Stats
+      ansible.builtin.debug:
+        msg: "CPU Usage: {{ cpu_usage_percent }}%, Total Memory: {{ total_memory_gb }} GB, Used Memory: {{ used_memory_gb }} GB, Free Memory: {{ free_memory_gb }} GB"
