@@ -27,14 +27,20 @@
       register: disk
       changed_when: false
 
+    - name: Set Parsed Facts
+      set_fact:
+        cpu_usage: "{{ cpu.stdout | float }}"
+        mem_total: "{{ mem.stdout_lines[0].split('=')[1] | float }}"
+        mem_free:  "{{ mem.stdout_lines[1].split('=')[1] | float }}"
+        disk_total: "{{ disk.stdout_lines[0].split('=')[1] | float }}"
+        disk_free:  "{{ disk.stdout_lines[1].split('=')[1] | float }}"
+
     - name: Show Stats
       debug:
         msg: |
           === System Usage Stats ===
-          CPU Usage       : {{ cpu.stdout | float }} %
-          Memory Total    : {{ mem.stdout_lines[0].split('=')[1] }} GB
-          Memory Free     : {{ mem.stdout_lines[1].split('=')[1] }} GB
-          Disk Total (C:) : {{ disk.stdout_lines[0].split('=')[1] }} GB
-          Disk Free (C:)  : {{ disk.stdout_lines[1].split('=')[1] }} GB
-
-
+          CPU Usage       : {{ cpu_usage }} %
+          Memory Total    : {{ mem_total }} GB
+          Memory Free     : {{ mem_free }} GB
+          Disk Total (C:) : {{ disk_total }} GB
+          Disk Free (C:)  : {{ disk_free }} GB
