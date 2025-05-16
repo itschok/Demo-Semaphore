@@ -7,6 +7,6 @@
       win_regedit:
         path: HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\System
         name: DisableTaskMgr
-        data: 1
+        data: 0
         type: dword
         state: present
