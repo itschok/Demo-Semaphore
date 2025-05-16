@@ -1,48 +1,35 @@
 ---
-- name: Get System Stats from Windows hosts
+- name: Get CPU, Memory, HDD Usage from Windows
   hosts: windows
-  gather_facts: true  
+  gather_facts: true
 
   tasks:
-    - name: Retrieve CPU Usage Percent (CookedValue)
+    - name: Get CPU Usage (%)
       ansible.windows.win_shell: |
         $cpu = Get-Counter '\Processor(_Total)\% Processor Time' -SampleInterval 1 -MaxSamples 2
-        $cpuValue = $cpu.CounterSamples[1].CookedValue
-        [math]::Round($cpuValue, 2)
-      register: cpu_usage_raw
+        [math]::Round($cpu.CounterSamples[1].CookedValue, 2)
+      register: cpu
       changed_when: false
 
-    - name: Parse CPU Usage
-      ansible.builtin.set_fact:
-        cpu_usage_percent: "{{ cpu_usage_raw.stdout | trim | float | default(0) }}"
-
-    - name: Set DateTime Fact
-      ansible.builtin.set_fact:
-        dtg: "{{ ansible_date_time.iso8601 }}"
-
-    - name: Retrieve Memory Usage
+    - name: Get Memory Usage (GB)
       ansible.windows.win_shell: |
         $os = Get-CimInstance Win32_OperatingSystem
-        $totalMemGB = [math]::Round(($os.TotalVisibleMemorySize * 1024) / 1GB, 2)
-        $freeMemGB = [math]::Round(($os.FreePhysicalMemory * 1024) / 1GB, 2)
-        $usedMemGB = [math]::Round($totalMemGB - $freeMemGB, 2)
-        Write-Output "total_memory=$totalMemGB"
-        Write-Output "used_memory=$usedMemGB"
-        Write-Output "free_memory=$freeMemGB"
-      register: memory_stats_raw
+        "mem_total=$([math]::Round(($os.TotalVisibleMemorySize * 1024) / 1GB, 2))"
+        "mem_free=$([math]::Round(($os.FreePhysicalMemory * 1024) / 1GB, 2))"
+      register: mem
       changed_when: false
 
-    - name: Parse Memory Stats
-      ansible.builtin.set_fact:
-        total_memory_gb: "{{ memory_stats_raw.stdout_lines[0].split('=')[1] | trim | float }}"
-        used_memory_gb: "{{ memory_stats_raw.stdout_lines[1].split('=')[1] | trim | float }}"
-        free_memory_gb: "{{ memory_stats_raw.stdout_lines[2].split('=')[1] | trim | float }}"
+    - name: Get HDD Usage (C:)
+      ansible.windows.win_shell: |
+        $d = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'"
+        "disk_total=$([math]::Round($d.Size / 1GB, 2))"
+        "disk_free=$([math]::Round($d.FreeSpace / 1GB, 2))"
+      register: disk
+      changed_when: false
 
-    - name: Display Stats
-      ansible.builtin.debug:
+    - name: Show Stats
+      debug:
         msg: >
-          {{ dtg }},
-          CPU Usage: {{ cpu_usage_percent }}%,
-          Total Memory: {{ total_memory_gb }} GB,
-          Used Memory: {{ used_memory_gb }} GB,
-          Free Memory: {{ free_memory_gb }} GB
+          CPU: {{ cpu.stdout | float }}% |
+          MEM: {{ mem.stdout_lines[0].split('=')[1] }}G total, {{ mem.stdout_lines[1].split('=')[1] }}G free |
+          DISK: {{ disk.stdout_lines[0].split('=')[1] }}G total, {{ disk.stdout_lines[1].split('=')[1] }}G free
