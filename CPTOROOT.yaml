@@ -1,0 +1,13 @@
+---
+-  name: Copy
+   host: linux
+   become: yes
+   task:
+     -  name: COPY HOST
+         ansible.builtin.copy:
+           src: /etc/hosts
+           dest: /root/
+           remote_src: yes
+           owner: root
+           group: root
+           mode: '0644'
