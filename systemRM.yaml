@@ -29,7 +29,11 @@
 
     - name: Show Stats
       debug:
-        msg: >
-          CPU: {{ cpu.stdout | float }}% |
-          MEM: {{ mem.stdout_lines[0].split('=')[1] }}G total, {{ mem.stdout_lines[1].split('=')[1] }}G free |
-          DISK: {{ disk.stdout_lines[0].split('=')[1] }}G total, {{ disk.stdout_lines[1].split('=')[1] }}G free
+        msg: |
+          === System Usage Stats ===
+          CPU Usage       : {{ cpu.stdout | float }} %
+          Memory Total    : {{ mem.stdout_lines[0].split('=')[1] }} GB
+          Memory Free     : {{ mem.stdout_lines[1].split('=')[1] }} GB
+          Disk Total (C:) : {{ disk.stdout_lines[0].split('=')[1] }} GB
+          Disk Free (C:)  : {{ disk.stdout_lines[1].split('=')[1] }} GB
+
