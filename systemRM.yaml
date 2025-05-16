@@ -18,6 +18,9 @@
         "mem_free=$([math]::Round(($os.FreePhysicalMemory * 1024) / 1GB, 2))"
       register: mem
       changed_when: false
+    - name: Set DateTime Fact
+      ansible.builtin.set_fact:
+        dtg: "{{ ansible_date_time.iso8601 }}"
 
     - name: Get HDD Usage (C:)
       ansible.windows.win_shell: |
