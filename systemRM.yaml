@@ -37,3 +37,4 @@
           Disk Total (C:) : {{ disk.stdout_lines[0].split('=')[1] }} GB
           Disk Free (C:)  : {{ disk.stdout_lines[1].split('=')[1] }} GB
 
+
