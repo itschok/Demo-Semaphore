@@ -37,10 +37,8 @@
 
     - name: Show Stats
       debug:
-        msg: |
-          === System Usage Stats ===
-          CPU Usage       : {{ cpu_usage }} %
-          Memory Total    : {{ mem_total }} GB
-          Memory Free     : {{ mem_free }} GB
-          Disk Total (C:) : {{ disk_total }} GB
-          Disk Free (C:)  : {{ disk_free }} GB
+        msg: >
+          === System Usage Stats === | CPU Usage: {{ cpu_usage }} % |
+          Memory: {{ mem_total }} GB total / {{ mem_free }} GB free |
+          Disk (C:): {{ disk_total }} GB total / {{ disk_free }} GB free
+
