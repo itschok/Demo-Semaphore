@@ -18,7 +18,7 @@
 
     - name: Set DateTime Fact
       ansible.builtin.set_fact:
-        dtg: "Current time (UTC): {{ ansible_date_time.iso8601 }}"
+        dtg: "{{ ansible_date_time.iso8601 }}"
 
     - name: Retrieve Memory Usage
       ansible.windows.win_shell: |
