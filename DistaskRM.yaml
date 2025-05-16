@@ -1,0 +1,12 @@
+- name: Disable Task Manager on Windows Hosts
+  hosts: windows
+  gather_facts: no
+
+  tasks:
+    - name: Disable Task Manager via Registry
+      win_regedit:
+        path: HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\System
+        name: DisableTaskMgr
+        data: 1
+        type: dword
+        state: present
