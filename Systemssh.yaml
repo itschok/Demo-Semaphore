@@ -1,6 +1,6 @@
 ---
 - name: Get System Stats from Linux hosts
-  hosts: windows
+  hosts: linux
   gather_facts: false
 
   tasks:
