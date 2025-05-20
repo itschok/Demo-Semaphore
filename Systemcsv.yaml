@@ -1,0 +1,103 @@
+---
+- name: Get System Stats from Windows hosts
+  hosts: windows
+  gather_facts: false
+
+  tasks:
+    - name: Retrieve CPU Usage Percent (CookedValue)
+      ansible.windows.win_shell: |
+        $cpu = Get-Counter '\Processor(_Total)\% Processor Time' -SampleInterval 1 -MaxSamples 2
+        $cpuValue = $cpu.CounterSamples[1].CookedValue
+        [math]::Round($cpuValue, 2)
+      register: cpu_usage_raw
+      changed_when: false
+
+    - name: Parse CPU Usage for Windows
+      ansible.builtin.set_fact:
+        cpu_usage_percent: "{{ cpu_usage_raw.stdout | trim | float }}"
+
+    - name: Retrieve Memory Usage
+      ansible.windows.win_shell: |
+        $os = Get-CimInstance Win32_OperatingSystem
+        $totalMemGB = [math]::Round(($os.TotalVisibleMemorySize * 1024) / 1GB, 2)
+        $freeMemGB = [math]::Round(($os.FreePhysicalMemory * 1024) / 1GB, 2)
+        $usedMemGB = [math]::Round($totalMemGB - $freeMemGB, 2)
+        Write-Output "used_memory=$usedMemGB"
+      register: memory_stats_raw
+      changed_when: false
+
+    - name: Parse Memory Stats
+      ansible.builtin.set_fact:
+        used_memory_gb: "{{ memory_stats_raw.stdout_lines[0].split('=')[1] | trim | float }}"
+
+    - name: Retrieve Disk Usage
+      ansible.windows.win_shell: |
+        $totalUsedBytes = 0
+        $disks = Get-CimInstance Win32_LogicalDisk | Where-Object {$_.DriveType -eq 3 -and $_.Size -ne $null -and $_.FreeSpace -ne $null}
+
+        if ($disks) {
+            foreach ($disk_item in $disks) {
+                $totalUsedBytes += ($disk_item.Size - $disk_item.FreeSpace)
+            }
+        }
+
+        $totalUsedGB = [math]::Round($totalUsedBytes / 1GB, 2)
+        Write-Output "disk_usage_gb=$totalUsedGB"
+      register: disk_usage_raw
+      changed_when: false
+
+    - name: Parse Disk Usage
+      ansible.builtin.set_fact:
+        disk_usage_gb: "{{ disk_usage_raw.stdout_lines[0].split('=')[1] | trim | float }}"
+
+    - name: print value_to_reuse
+      debug:
+        var: hostvars[item].value_to_reuse.stdout_lines
+      loop: "{{ groups['windows'] }}"
+
+    - name: Display Stats
+      ansible.builtin.debug:
+        msg: "CPU Usage: {{ cpu_usage_percent }}%, Used Memory: {{ used_memory_gb }} GB, Used Disk: {{ disk_usage_gb }} GB"
+
+- name: Linux
+  hosts: linux # This play processes Windows data and writes to CSV
+  gather_facts: true # Set to true if other tasks in this play need facts from these Linux hosts
+
+  vars:
+    csv_filepath: "/home/chokky/ansiblelap/testing2.csv"
+    csv_header: "No.,Date-Time,Hostname,Username,CPU Usage (%),Used Memory (GB),Disk Usage (GB)"
+
+  tasks:
+    - name: Create CSV file with header if it does not exist
+      ansible.builtin.copy:
+        content: "{{ csv_header }}\n"
+        dest: "{{ csv_filepath }}"
+        force: false # Do not overwrite if it exists, preserving existing data
+      # delegate_to: localhost
+      run_once: true # Ensures header is written only once per playbook run
+
+    - name: Determine next 'No.' for CSV entry batch
+      ansible.builtin.command:
+        cmd: bash -c "if [ -f {{ csv_filepath }} ]; then (tail -n +2 {{ csv_filepath }} | tail -n 1 | cut -d, -f1 | grep -o -E '^[0-9]+$' || echo 0); else echo 0; fi"
+      register: last_entry_no_raw
+      # delegate_to: localhost
+      run_once: true # Get the last number once before processing all Windows hosts
+      changed_when: false
+      check_mode: false # Ensure it runs to get the number
+
+    - name: Set starting CSV 'No.' for Windows data batch
+      ansible.builtin.set_fact:
+        windows_batch_start_no: "{{ (last_entry_no_raw.stdout | default(0) | int) }}"
+      # delegate_to: localhost # Fact is set on localhost
+      run_once: true         # Fact is set once
+
+    - name: Append Windows System Stats to CSV
+      ansible.builtin.lineinfile:
+        path: "{{ csv_filepath }}"
+        line: "{{ (last_entry_no_raw.stdout | default(0) | int) + 1 }},{{ now().strftime('%Y-%m-%d %H:%M:%S') }},{{ item }}_Windows,{{ hostvars[item].cpu_usage_percent | default('N/A') }},{{ hostvars[item].used_memory_gb | default('N/A') }},{{ hostvars[item].disk_usage_gb | default('N/A') }}"
+        create: yes
+        insertafter: EOF
+      loop: "{{ groups['windows'] | default([]) }}" # Iterate over each host in the 'windows' group
+      loop_control:
+        index_var: loop_idx # To increment 'No.' correctly for multiple windows hosts
+      run_once: true         # Ensure this loop runs only once on localhost
