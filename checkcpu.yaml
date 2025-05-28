@@ -1,0 +1,23 @@
+---
+- name: Check CPU Usage on Windows Hosts
+  hosts: windows
+  gather_facts: no
+
+  tasks:
+    - name: Get CPU usage using PowerShell and format as JSON (compressed)
+      win_shell: |
+        $hostname = $env:COMPUTERNAME
+        $cpu = Get-Counter '\Processor(_Total)\% Processor Time'
+        $value = [math]::Round($cpu.CounterSamples[0].CookedValue, 2)
+
+        $result = [PSCustomObject]@{
+            hostname = $hostname
+            cpu_usage = $value
+        }
+        $result | ConvertTo-Json -Compress # <--- เพิ่ม -Compress ตรงนี้
+      register: cpu_output
+
+    - name: Print JSON output for N8N
+      debug:
+        msg: "{{ cpu_output.stdout }}" # ไม่ต้อง from_json แล้ว เพราะ stdout ของ win_shell มันคือ JSON string ที่สมบูรณ์แบบ
+      # หรือจะใช้ debug: var: cpu_output.stdout ก็ได้ ถ้าต้องการให้ Ansible ครอบด้วยชื่อตัวแปร
